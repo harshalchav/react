@@ -558,6 +558,30 @@ describe('useEvent', () => {
   });
 
   // @gate enableUseEventHook
+  it("doesn't provide a stable identity", () => {
+    function Counter({shouldRender}) {
+      const onClick = useEvent(() => {
+        Scheduler.unstable_yieldValue('onClick');
+      });
+
+      // onClick doesn't have a stable function identity so this effect will fire on every render.
+      // In a real app useEvent functions should *not* be passed as a dependency, this is for
+      // testing purposes only.
+      useEffect(() => {
+        onClick();
+      }, [onClick]);
+
+      return <></>;
+    }
+
+    ReactNoop.render(<Counter shouldRender={true} />);
+    expect(Scheduler).toFlushAndYield(['onClick']);
+
+    ReactNoop.render(<Counter shouldRender={true} />);
+    expect(Scheduler).toFlushAndYield(['onClick']);
+  });
+
+  // @gate enableUseEventHook
   it('integration: implements docs chat room example', () => {
     function createConnection() {
       let connectedCallback;
@@ -597,7 +621,7 @@ describe('useEvent', () => {
         });
         connection.connect();
         return () => connection.disconnect();
-      }, [roomId, onConnected]);
+      }, [roomId]);
 
       return <Text text={`Welcome to the ${roomId} room!`} />;
     }
